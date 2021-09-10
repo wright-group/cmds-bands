@@ -1,7 +1,7 @@
 import numpy as np
 import toml
 import WrightTools as wt
-from .lib import k_grid_lat, gen_kframe
+from .kpoints import k_grid_lat, gen_kframe
 
 ### -----------------------------------------------------------------------------------------------
 
