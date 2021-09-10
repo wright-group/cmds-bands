@@ -6,7 +6,21 @@ import WrightTools as wt
 
 
 def calc_chan_grad(data, channel:int=0):
-    """compute gradient.  stor  e as channel of data
+    """Compute gradient.  Gradient is stored as four channels of data: one
+    for each cartesian coordinate, as well as one for the total gradient
+    magnitude.
+
+    Parameters
+    ----------
+    data : wt.Data object
+        The data object which contains the current channel, to which the 
+        gradient will be added
+    channel : int, default 0
+        Channel from which the gradient is calculated
+    
+    Returns
+    -------
+    None
     """
     channel = data.channels[channel]
     delta = []
@@ -41,9 +55,28 @@ def calc_chan_grad(data, channel:int=0):
 
 
 def as_wt_data(toml_path, band_path=None, name=None, parent=None) -> wt.Data:
-    """structured data object
-    retains lattice info (attrs["klattice], 0th index specifies vectors)
-    populate data object with channels if band_path is provided
+    """Create a data object of kspace variables and band energy channels, structured 
+    according to the kmesh parameters of the toml file.
+
+    Parameters
+    ----------
+    toml_path : path-like
+        kmesh is read by "ns" field ( integer list (nb1, nb2, nb3) ).
+        Lattice coordinates are read in the toml: attrs["klattice], 0th index specifies 
+        vectors).
+    band_path : path-like, optional
+        if provided, channels are created for all bands provided
+    name : str, optional
+        data object name
+    parent : wt.Collection, optional
+        parent for data object
+
+    Returns
+    -------
+    data : wt.Data
+        The data object has variables of both Cartesian lattice coordinates 
+        (x, y, z) and the lattice vector coordinates (b1, b2, b3). 
+
     """
     ini = toml.load(toml_path)
 
@@ -118,7 +151,6 @@ def gen_klist(toml_path, output_path):
         ini["lattice"][a] for a in ["a1", "a2", "a3"]
     ])
     klattice = gen_kframe(rlattice)
-    # klis_lat = gen_klis(*[ini["grid"]["ns"]])
     klis = []
     # grid axes (in lattice coordinates)
     ks = [k_grid_lat(ni) for ni in ini["grid"]["ns"]]
