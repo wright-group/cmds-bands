@@ -5,7 +5,6 @@ from .lib import k_grid_lat, gen_kframe
 
 ### -----------------------------------------------------------------------------------------------
 
-
 class MeshData(wt.Data):
     def grad(self, channel:int):
         """Compute gradient of channel.  Gradient is stored as four channels of
@@ -14,7 +13,7 @@ class MeshData(wt.Data):
 
         Parameters
         ----------
-        channel : int
+        channel : int, str
             Channel from which the gradient is calculated
         
         Returns
@@ -22,7 +21,12 @@ class MeshData(wt.Data):
         None
 
         """
-        channel = self.channels[channel]
+        idx = wt.kit.get_index(self.channel_names, channel)
+        print(idx)
+        channel = self.channels[
+            wt.kit.get_index(self.channel_names, channel)
+        ]
+
         delta = []
         # calc grid spacing
         for i in range(channel.ndim):
@@ -40,14 +44,14 @@ class MeshData(wt.Data):
         klattice = self.attrs["klattice"]
         diffs = np.tensordot(diffs, np.linalg.inv(klattice), axes=(-1, -1))
         self.create_channel(
-            name=channel.name + "_d",
+            name=channel.natural_name + "_d",
             values=np.sqrt(diffs[0]**2 + diffs[1]**2 + diffs[2]**2),
             signed=True
         )
 
         for i, cart in enumerate("xyz"):
             self.create_channel(
-                name=channel.name + f"_d{cart}",
+                name=channel.natural_name + f"_d{cart}",
                 values=diffs[i],
                 signed=True
             )
@@ -68,6 +72,7 @@ def as_structured(toml_path, band_path=None, bandlims = [], name=None, parent=No
     band_path : path-like, optional
         if provided, channels are created for all bands provided
     bandlims : list of length 2, optional
+        ! NOT YET IMPLEMENTED
         interval of bands that are retained as channels.  Only relevant if band_path is
         provided.
     name : str, optional
