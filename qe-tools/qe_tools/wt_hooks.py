@@ -43,10 +43,11 @@ class MeshData(wt.Data):
         ]
         klattice = self.attrs["klattice"]
         diffs = np.tensordot(diffs, np.linalg.inv(klattice), axes=(-1, -1))
+
         self.create_channel(
             name=channel.natural_name + "_d",
             values=np.sqrt(diffs[0]**2 + diffs[1]**2 + diffs[2]**2),
-            signed=True
+            signed=False
         )
 
         for i, cart in enumerate("xyz"):
@@ -61,20 +62,20 @@ class MeshData(wt.Data):
 
 def as_structured(toml_path, band_path=None, bandlims = [], name=None, parent=None) -> MeshData:
     """Create a data object of kspace variables and band energy channels, structured 
-    according to the kmesh parameters of the toml file.
+    according to the kmesh parameters of the toml file (attrs["klattice"]).  
 
     Parameters
     ----------
     toml_path : path-like
         kmesh is read by "ns" field ( integer list (nb1, nb2, nb3) ).
-        Lattice coordinates are read in the toml: attrs["klattice], 0th index specifies 
-        vectors).
+        Lattice coordinates are read in the toml: attrs["klattice], 0th index
+        specifies vectors).
     band_path : path-like, optional
         if provided, channels are created for all bands provided
     bandlims : list of length 2, optional
         ! NOT YET IMPLEMENTED
-        interval of bands that are retained as channels.  Only relevant if band_path is
-        provided.
+        list specifies the range (min and max) of the range of bands retained
+        as channels.  Only relevant if band_path is provided.
     name : str, optional
         data object name
     parent : wt.Collection, optional
@@ -85,7 +86,7 @@ def as_structured(toml_path, band_path=None, bandlims = [], name=None, parent=No
     data : MeshData (wt.Data subclass)
         The data object has variables of both Cartesian lattice coordinates 
         (x, y, z) and the lattice vector coordinates (b1, b2, b3). 
-        subclass adds gradient method `grad` 
+        MeshData subclass adds gradient method `grad` 
     """
     ini = toml.load(toml_path)
 
