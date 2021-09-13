@@ -5,7 +5,7 @@ from .kpoints import k_grid_lat, gen_kframe
 
 ### -----------------------------------------------------------------------------------------------
 
-class MeshData(wt.Data):
+class MeshData(wt.data.Data):
     def grad(self, channel:int):
         """Compute gradient of channel.  Gradient is stored as four channels of
         data: one for each cartesian coordinate (xyz), as well as one for the 
@@ -21,8 +21,6 @@ class MeshData(wt.Data):
         None
 
         """
-        idx = wt.kit.get_index(self.channel_names, channel)
-        print(idx)
         channel = self.channels[
             wt.kit.get_index(self.channel_names, channel)
         ]
@@ -60,9 +58,11 @@ class MeshData(wt.Data):
         return
 
 
-def as_structured(toml_path, band_path=None, bandlims = [], name=None, parent=None) -> MeshData:
-    """Create a data object of kspace variables and band energy channels, structured 
-    according to the kmesh parameters of the toml file (attrs["klattice"]).  
+def as_structured(
+    toml_path, band_path=None, blims=None, name=None, parent=None
+) -> MeshData:
+    """Create a data object of kspace variables and band energy channels, 
+    structured according to the kmesh parameters of the toml file.  
 
     Parameters
     ----------
@@ -72,9 +72,8 @@ def as_structured(toml_path, band_path=None, bandlims = [], name=None, parent=No
         specifies vectors).
     band_path : path-like, optional
         if provided, channels are created for all bands provided
-    bandlims : list of length 2, optional
-        ! NOT YET IMPLEMENTED
-        list specifies the range (min and max) of the range of bands retained
+    blims : list of length 2, optional
+        Band limits.  list specifies the range [start, stop] of bands retained
         as channels.  Only relevant if band_path is provided.
     name : str, optional
         data object name
@@ -86,7 +85,9 @@ def as_structured(toml_path, band_path=None, bandlims = [], name=None, parent=No
     data : MeshData (wt.Data subclass)
         The data object has variables of both Cartesian lattice coordinates 
         (x, y, z) and the lattice vector coordinates (b1, b2, b3). 
-        MeshData subclass adds gradient method `grad` 
+        MeshData subclass adds gradient method `grad`.
+        k-lattice vectors expressed in cartesian coordinates are stored in
+        attrs (key "klattice").
     """
     ini = toml.load(toml_path)
 
@@ -97,8 +98,7 @@ def as_structured(toml_path, band_path=None, bandlims = [], name=None, parent=No
 
     rlattice = np.array([
         ini["lattice"][a] for a in ["a1", "a2", "a3"]
-    ])  # index 1 is lattice vectors
-    print(rlattice)
+    ])  # index 1 is lattice vector
 
     klattice = gen_kframe(rlattice)  # index 1 is lattice vectors
     out.attrs["klattice"] = klattice
@@ -113,24 +113,28 @@ def as_structured(toml_path, band_path=None, bandlims = [], name=None, parent=No
         out.create_variable(name, values=cartesian[...,i], units=None)
 
     if band_path is not None:
-        kpoints, bands = _load_bands(band_path)
+        kpoints, bands = _load_bands(band_path, blims)
         fermi = 0
         if "options" in ini.keys():
             if "fermi" in ini["options"].keys():
                 fermi = ini["options"]["fermi"]
+
+        i_offset = 0 if blims is None else blims[0]
         for i in range(bands.shape[-1]):
             band = bands[:, i].reshape(
                 *[ni for ni in ini["grid"]["ns"]]
             ) - fermi
-            out.create_channel(f"band{i}", values=band, signed=True)
+            out.create_channel(f"band{i + i_offset}", values=band, signed=True)
     return out
 
 
-def _load_bands(band_path, nbands=None):
+def _load_bands(band_path, blims=None):
+    blims = blims if blims is not None else [None, None]
+ 
     kpoints = []
     bands = []
+    k_band = []
 
-    band = []
     with open(band_path, "rt") as f:
         for m, line in enumerate(f):
             if m==0: continue  # header
@@ -139,14 +143,14 @@ def _load_bands(band_path, nbands=None):
                 kpoints.append(split)
             elif len(split) == 3:
                 kpoints.append(split)
-                bands.append(band)  # store and reset
-                band = []
+                bands.append(k_band[blims[0]:blims[1]])  # store and reset
+                k_band = []
             else:  # accumulate; bands may span multiple rows
-                band += split
-        bands.append(band)
-
+                k_band += split
+        bands.append(k_band[blims[0]:blims[1]])
+ 
     kpoints = np.array(kpoints)
     bands = np.array(bands)
-
+ 
     return kpoints, bands
 
