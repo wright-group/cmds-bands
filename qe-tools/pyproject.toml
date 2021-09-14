@@ -7,7 +7,7 @@ module = "qe_tools"
 dist-name = "qe-tools"
 author = ""
 author-email = ""
-home-page = "https://github.com/wright-group/"
+home-page = "https://github.com/wright-group/cmds-bands"
 classifiers = ["License :: OSI Approved :: MIT License"]
 requires-python = ">=3.7"
 requires = [
