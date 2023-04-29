@@ -14,6 +14,7 @@ def gen_klist(toml_path, target=None, cartesian=True):
     Parameters
     ----------
         toml_path : path-like
+            path to toml file with config settings
         target : path-like (optional)
             If supplied, kgrid is appended to target file in kpoints format.  
             If no target is supplied, klist is returned
